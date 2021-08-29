@@ -10,6 +10,8 @@ import os
 global main_folder_id
 main_folder_id = '1yL7xpS8NbIwmUoq_jlacfpeuW8ldPdK7'
 
+global main_path
+main_path = "D:/Thapar/BE/5th Sem/Data - Lectures/Cloud Computing (UCS531)/Assignment_CC/CC backup project/Project/Backup/"
 
 class MyDrive():
     def __init__(self):
@@ -109,25 +111,44 @@ class MyDrive():
             print("Folder was already present..\n")
             return response['files'][0]['id']
 
+    def backup(self, path, folder_id):
+        items = os.listdir(path)
+        print("Printing items in Local system:", items)
+
+        for file in os.listdir(path):
+            print("\n",file, "\n")
+            if os.path.isfile(os.path.join(path, file)):
+                self.upload_file(file, path, folder_id)
+            else:
+                new_folder_id = self.make_folder(file, folder_id)
+                new_path = path + file +"/"
+                print("New Path: ", new_path)
+                self.backup(new_path, new_folder_id)
+
+
 
 def main():
-    path = "D:/Thapar/BE/5th Sem/Data - Lectures/Cloud Computing (UCS531)/Assignment_CC/CC backup project/Project/Backup/"
-
-    files = os.listdir(path)
-    print("Printing files in Local system:", files)
-
     my_drive = MyDrive()
-
     # print("\nPrinting-----------------------")
     # my_drive.list_files()
     # print("Printing end-----------------------\n\n")
+
+    # main_path = "D:/Thapar/BE/5th Sem/Data - Lectures/Cloud Computing (UCS531)/Assignment_CC/CC backup project/Project/Backup/"
+    # print("type: ", type(main_path))
+    # new_path = main_path + "Test/"
+    # print(new_path)
+    # print("type: ", type(new_path))
+
 
     # for item in files:
     #     my_drive.upload_file(item, path, main_folder_id)
     #     print(item)
 
-    folder_id = my_drive.make_folder('Sagar', main_folder_id)
-    print("FOLDER_ID: ", folder_id)
+    # folder_id = my_drive.make_folder('Sagar', main_folder_id)
+    # print("FOLDER_ID: ", folder_id)
+
+    my_drive.backup(main_path, main_folder_id)
+
 
 if __name__ == '__main__':
     main()
