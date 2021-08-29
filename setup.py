@@ -7,8 +7,9 @@ from apiclient.http import MediaFileUpload
 
 import os
 
-global main_folder_id 
+global main_folder_id
 main_folder_id = '1yL7xpS8NbIwmUoq_jlacfpeuW8ldPdK7'
+
 
 class MyDrive():
     def __init__(self):
@@ -56,17 +57,18 @@ class MyDrive():
         media = MediaFileUpload(f"{path}{filename}")
 
         response = self.service.files().list(
-                                        q=f"name='{filename}' and parents='{folder_id}'",
-                                        spaces='drive',
-                                        fields='nextPageToken, files(id, name)',
-                                        pageToken=None).execute()
-                                        
+            q=f"name='{filename}' and parents='{folder_id}'",
+            spaces='drive',
+            fields='nextPageToken, files(id, name)',
+            pageToken=None).execute()
+
         if len(response['files']) == 0:
             file_metadata = {
                 'name': filename,
                 'parents': [folder_id]
             }
-            file = self.service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            file = self.service.files().create(
+                body=file_metadata, media_body=media, fields='id').execute()
             print(f"A new file was created {file.get('id')}")
 
         else:
@@ -78,32 +80,39 @@ class MyDrive():
                     media_body=media,
                 ).execute()
                 print(f'Updated File')
-    
+
     def make_folder(self, new_folder, parent_folder_id):
-# //////////////////////////////////
-        print("Searching all data:-\n")
+
+        ##first searches for the folder, if not present then create the same.....
+        print("Searching for the folder in the given directory:-\n")
         response = self.service.files().list(
-                                q=f"name='{filename}' and parents='{folder_id}'",
-                                spaces='drive',
-                                fields='nextPageToken, files(id, name)',
-                                pageToken=None).execute()
+            q=f"mimeType = 'application/vnd.google-apps.folder' and name='{new_folder}' and parents='{parent_folder_id}'",
+            spaces='drive',
+            fields='nextPageToken, files(id, name)',
+            pageToken=None).execute()
         print(response)
         print("Search end.....////////////////\n\n")
-# //////////////////////////
+        
+        if len(response['files']) == 0:
+            file_metadata = {
+                'name': new_folder,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [parent_folder_id]
+            }
 
-        file_metadata = {
-            'name': new_folder,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [parent_folder_id]
-        }
-
-        file = self.service.files().create(body=file_metadata,
+            file = self.service.files().create(body=file_metadata,
                                             fields='id').execute()
-        print ('A folder is created with Folder ID: %s' % file.get('id'))
+            print('A folder is created with Folder ID: %s' % file.get('id'))
+            return file.get('id')
+        
+        else:
+            print("Folder was already present..\n")
+            return response['files'][0]['id']
 
 
 def main():
     path = "D:/Thapar/BE/5th Sem/Data - Lectures/Cloud Computing (UCS531)/Assignment_CC/CC backup project/Project/Backup/"
+
     files = os.listdir(path)
     print("Printing files in Local system:", files)
 
@@ -116,10 +125,9 @@ def main():
     # for item in files:
     #     my_drive.upload_file(item, path, main_folder_id)
     #     print(item)
-    
-    my_drive.make_folder('Sagar', main_folder_id)
-    
 
+    folder_id = my_drive.make_folder('Sagar', main_folder_id)
+    print("FOLDER_ID: ", folder_id)
 
 if __name__ == '__main__':
     main()
