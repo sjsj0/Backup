@@ -1,3 +1,4 @@
+import path_var
 import pickle
 import os.path
 from googleapiclient.discovery import build
@@ -8,10 +9,10 @@ from apiclient.http import MediaFileUpload
 import os
 
 global main_folder_id
-main_folder_id = '1yL7xpS8NbIwmUoq_jlacfpeuW8ldPdK7'
+main_folder_id = path_var.main_folder_id
 
 global main_path
-main_path = "D:/Thapar/BE/5th Sem/Data - Lectures/Cloud Computing (UCS531)/Assignment_CC/CC backup project/Project/Backup/"
+main_path = path_var.main_path
 
 class MyDrive():
     def __init__(self):
@@ -132,17 +133,6 @@ def main():
     # print("\nPrinting-----------------------")
     # my_drive.list_files()
     # print("Printing end-----------------------\n\n")
-
-    # main_path = "D:/Thapar/BE/5th Sem/Data - Lectures/Cloud Computing (UCS531)/Assignment_CC/CC backup project/Project/Backup/"
-    # print("type: ", type(main_path))
-    # new_path = main_path + "Test/"
-    # print(new_path)
-    # print("type: ", type(new_path))
-
-
-    # for item in files:
-    #     my_drive.upload_file(item, path, main_folder_id)
-    #     print(item)
 
     # folder_id = my_drive.make_folder('Sagar', main_folder_id)
     # print("FOLDER_ID: ", folder_id)
