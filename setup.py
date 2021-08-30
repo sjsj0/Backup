@@ -6,13 +6,17 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from apiclient.http import MediaFileUpload
 
-import os
+import os, time
+from dateutil import parser
 
 global main_folder_id
 main_folder_id = path_var.main_folder_id
 
 global main_path
 main_path = path_var.main_path
+
+# library to install..
+# pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
 class MyDrive():
     def __init__(self):
@@ -45,7 +49,7 @@ class MyDrive():
     def list_files(self, page_size=10):
         # Call the Drive v3 API
         results = self.service.files().list(
-            pageSize=page_size, fields="nextPageToken, files(id, name)").execute()
+            pageSize=page_size, fields="nextPageToken, files(id, name, mimeType, modifiedTime, trashed)").execute()
         items = results.get('files', [])
 
         if not items:
@@ -54,16 +58,19 @@ class MyDrive():
             print('Files:')
             for item in items:
                 print(u'{0} ({1})'.format(item['name'], item['id']))
+                # print(item)
 
     def upload_file(self, filename, path, folder_id):
-        # folder_id = "1yL7xpS8NbIwmUoq_jlacfpeuW8ldPdK7"
         media = MediaFileUpload(f"{path}{filename}")
 
         response = self.service.files().list(
             q=f"name='{filename}' and parents='{folder_id}'",
             spaces='drive',
-            fields='nextPageToken, files(id, name)',
+            fields='nextPageToken, files(id, name, mimeType, modifiedTime, trashed)',
             pageToken=None).execute()
+
+        # print("Printing response: ", response)
+
 
         if len(response['files']) == 0:
             file_metadata = {
@@ -77,19 +84,35 @@ class MyDrive():
         else:
             for file in response.get('files', []):
                 # Process change
+                online_file_modified_time = file['modifiedTime']
+                print("online_file_modified_time :- ", online_file_modified_time)
+                # online = parser.isoparse(online_file_modified_time)
+                online = time.mktime(time.strptime(file['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ'))
+                print("Online:-", online)
 
-                update_file = self.service.files().update(
-                    fileId=file.get('id'),
-                    media_body=media,
-                ).execute()
-                print(f'Updated File')
+                # local_file_modified_time = time.ctime(os.path.getmtime(os.path.join(path, filename)))
+                local_file_modified_time = os.path.getmtime(os.path.join(path, filename))
+                print("local_file_modified_time :- ", local_file_modified_time)
+
+
+                # print("Type: ", type(online_file_modified_time), type(local_file_modified_time), type(online))
+
+                if(local_file_modified_time > online):
+                    update_file = self.service.files().update(
+                        fileId=file.get('id'),
+                        media_body=media,
+                    ).execute()
+                    print(f'Updated File')
+
+                else:
+                    print("File already up to date.")
 
     def make_folder(self, new_folder, parent_folder_id):
 
         ##first searches for the folder, if not present then create the same.....
         print("Searching for the folder in the given directory:-\n")
         response = self.service.files().list(
-            q=f"mimeType = 'application/vnd.google-apps.folder' and name='{new_folder}' and parents='{parent_folder_id}'",
+            q=f"mimeType = 'application/vnd.google-apps.folder' and not trashed and name='{new_folder}' and parents='{parent_folder_id}'",
             spaces='drive',
             fields='nextPageToken, files(id, name)',
             pageToken=None).execute()
@@ -116,7 +139,7 @@ class MyDrive():
         items = os.listdir(path)
         print("Printing items in Local system:", items)
 
-        for file in os.listdir(path):
+        for file in items:
             print("\n",file, "\n")
             if os.path.isfile(os.path.join(path, file)):
                 self.upload_file(file, path, folder_id)
@@ -125,6 +148,7 @@ class MyDrive():
                 new_path = path + file +"/"
                 print("New Path: ", new_path)
                 self.backup(new_path, new_folder_id)
+
 
 
 
