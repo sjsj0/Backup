@@ -1,6 +1,6 @@
 backup.bat
 credentials.json
 token.pickle
-Backup
 path_var.py
 __pycache__
+logFile.txt

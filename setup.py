@@ -1,3 +1,4 @@
+from googleapiclient.http import MediaFileUpload
 import path_var
 import pickle
 import os.path
@@ -5,6 +6,9 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from apiclient.http import MediaFileUpload
+from datetime import datetime
+from apiclient import http
+
 
 import os
 
@@ -55,6 +59,12 @@ class MyDrive():
             for item in items:
                 print(u'{0} ({1})'.format(item['name'], item['id']))
 
+    def log_append(self,filename,operation,path):
+        f = open("logFile.txt", "a")
+        f.seek(0)
+        f.write("\n{0}\t|\t{1}\t|\t{2}\t\t|\t{3}\t".format(datetime.now().strftime("%Y-%m-%d %H:%M"),filename,operation,path))
+        f.close()
+
     def upload_file(self, filename, path, folder_id):
         # folder_id = "1yL7xpS8NbIwmUoq_jlacfpeuW8ldPdK7"
         media = MediaFileUpload(f"{path}{filename}")
@@ -73,6 +83,8 @@ class MyDrive():
             file = self.service.files().create(
                 body=file_metadata, media_body=media, fields='id').execute()
             print(f"A new file was created {file.get('id')}")
+            self.log_append(filename,'Created',path)
+
 
         else:
             for file in response.get('files', []):
@@ -83,6 +95,7 @@ class MyDrive():
                     media_body=media,
                 ).execute()
                 print(f'Updated File')
+                self.log_append(filename,'Updated',path)
 
     def make_folder(self, new_folder, parent_folder_id):
 
@@ -111,6 +124,8 @@ class MyDrive():
         else:
             print("Folder was already present..\n")
             return response['files'][0]['id']
+
+
 
     def backup(self, path, folder_id):
         items = os.listdir(path)
