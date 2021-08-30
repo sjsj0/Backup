@@ -178,8 +178,6 @@ class MyDrive():
             print("Folder was already present..\n")
             return response['files'][0]['id']
 
-
-
     def backup(self, path, folder_id):
         items = os.listdir(path)
         print("Printing items in Local system:", items)
