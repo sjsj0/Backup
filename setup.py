@@ -7,7 +7,11 @@ from google.auth.transport.requests import Request
 from apiclient.http import MediaFileUpload
 
 import os, time
-from dateutil import parser
+from dateutil import parser, tz
+from datetime import datetime
+
+from_zone = tz.tzutc()
+to_zone = tz.tzlocal()
 
 global main_folder_id
 main_folder_id = path_var.main_folder_id
@@ -64,7 +68,7 @@ class MyDrive():
         media = MediaFileUpload(f"{path}{filename}")
 
         response = self.service.files().list(
-            q=f"name='{filename}' and parents='{folder_id}'",
+            q=f"name='{filename}' and not trashed and parents='{folder_id}'",
             spaces='drive',
             fields='nextPageToken, files(id, name, mimeType, modifiedTime, trashed)',
             pageToken=None).execute()
@@ -86,11 +90,35 @@ class MyDrive():
                 # Process change
                 online_file_modified_time = file['modifiedTime']
                 print("online_file_modified_time :- ", online_file_modified_time)
+
                 # online = parser.isoparse(online_file_modified_time)
-                online = time.mktime(time.strptime(file['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ'))
+                # print("Online:-", online)
+
+                ## Converting string to datetime format
+                onlinetime = datetime.strptime(online_file_modified_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+                # print(onlinetime)
+
+                ## Converting time zone..
+                onlinetime = onlinetime.replace(tzinfo=from_zone)
+                # print("Online time UTC zone:- ", onlinetime)
+                online = onlinetime.astimezone(to_zone)
+                print("Online local zone:-", online)
+
+                
+
+                ## Converting back to string..
+                online = online.strftime('%Y-%m-%d %H:%M:%S.%fZ')
+                # print("online:-", online)
+
+                # print(time.strptime(online, '%Y-%m-%d %H:%M:%S.%fZ'))
+
+                online = time.mktime(time.strptime(online, '%Y-%m-%d %H:%M:%S.%fZ'))
                 print("Online:-", online)
 
-                # local_file_modified_time = time.ctime(os.path.getmtime(os.path.join(path, filename)))
+
+                ## Time calculation for local file..
+                local_file_modified_time = time.ctime(os.path.getmtime(os.path.join(path, filename)))
+                print("local_file_modified_time :- ", local_file_modified_time)
                 local_file_modified_time = os.path.getmtime(os.path.join(path, filename))
                 print("local_file_modified_time :- ", local_file_modified_time)
 
