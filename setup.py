@@ -97,7 +97,7 @@ class MyDrive():
             file = self.service.files().create(
                 body=file_metadata, media_body=media, fields='id').execute()
             print(f"A new file was created {file.get('id')}")
-            self.log_append(filename,'Created',path)
+            self.log_append(filename,'File Created',path)
 
 
         else:
@@ -144,7 +144,7 @@ class MyDrive():
                         media_body=media,
                     ).execute()
                     print(f'Updated File')
-                    self.log_append(filename,'Updated',path)
+                    self.log_append(filename,'File Updated',path)
 
                 else:
                     print("File already up to date.")
@@ -171,6 +171,7 @@ class MyDrive():
             file = self.service.files().create(body=file_metadata,
                                             fields='id').execute()
             print('A folder is created with Folder ID: %s' % file.get('id'))
+            self.log_append(new_folder, 'Folder Created', parent_folder_id)
             return file.get('id')
         
         else:
