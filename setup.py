@@ -10,13 +10,21 @@ from datetime import datetime
 from apiclient import http
 
 
-import os
+import os, time
+from dateutil import parser, tz
+from datetime import datetime
+
+from_zone = tz.tzutc()
+to_zone = tz.tzlocal()
 
 global main_folder_id
 main_folder_id = path_var.main_folder_id
 
 global main_path
 main_path = path_var.main_path
+
+# library to install..
+# pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
 class MyDrive():
     def __init__(self):
@@ -49,7 +57,7 @@ class MyDrive():
     def list_files(self, page_size=10):
         # Call the Drive v3 API
         results = self.service.files().list(
-            pageSize=page_size, fields="nextPageToken, files(id, name)").execute()
+            pageSize=page_size, fields="nextPageToken, files(id, name, mimeType, modifiedTime, trashed)").execute()
         items = results.get('files', [])
 
         if not items:
@@ -58,22 +66,28 @@ class MyDrive():
             print('Files:')
             for item in items:
                 print(u'{0} ({1})'.format(item['name'], item['id']))
+                # print(item)
 
     def log_append(self,filename,operation,path):
-        f = open("logFile.txt", "a")
-        f.seek(0)
-        f.write("\n{0}\t|\t{1}\t|\t{2}\t\t|\t{3}\t".format(datetime.now().strftime("%Y-%m-%d %H:%M"),filename,operation,path))
+        f = open("logFile.txt", "r")
+        s1 = f.readlines()
+        var ='\n'+ datetime.now().strftime("%Y-%m-%d %H:%M") + '\t|\t' + filename + '\t\t|\t' + operation + '\t|\t'+  path 
+        s1.insert(1,var)
+        f = open("logFile.txt", "w")
+        f.writelines(s1)
         f.close()
 
     def upload_file(self, filename, path, folder_id):
-        # folder_id = "1yL7xpS8NbIwmUoq_jlacfpeuW8ldPdK7"
         media = MediaFileUpload(f"{path}{filename}")
 
         response = self.service.files().list(
-            q=f"name='{filename}' and parents='{folder_id}'",
+            q=f"name='{filename}' and not trashed and parents='{folder_id}'",
             spaces='drive',
-            fields='nextPageToken, files(id, name)',
+            fields='nextPageToken, files(id, name, mimeType, modifiedTime, trashed)',
             pageToken=None).execute()
+
+        # print("Printing response: ", response)
+
 
         if len(response['files']) == 0:
             file_metadata = {
@@ -89,20 +103,58 @@ class MyDrive():
         else:
             for file in response.get('files', []):
                 # Process change
+                online_file_modified_time = file['modifiedTime']
+                print("online_file_modified_time :- ", online_file_modified_time)
 
-                update_file = self.service.files().update(
-                    fileId=file.get('id'),
-                    media_body=media,
-                ).execute()
-                print(f'Updated File')
-                self.log_append(filename,'Updated',path)
+                # online = parser.isoparse(online_file_modified_time)
+                # print("Online:-", online)
+
+                ## Converting string to datetime format
+                onlinetime = datetime.strptime(online_file_modified_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+                # print(onlinetime)
+
+                ## Converting time zone..
+                onlinetime = onlinetime.replace(tzinfo=from_zone)
+                # print("Online time UTC zone:- ", onlinetime)
+                online = onlinetime.astimezone(to_zone)
+                print("Online local zone:-", online)
+
+                ## Converting back to string..
+                online = online.strftime('%Y-%m-%d %H:%M:%S.%fZ')
+                # print("online:-", online)
+
+                # print(time.strptime(online, '%Y-%m-%d %H:%M:%S.%fZ'))
+
+                online = time.mktime(time.strptime(online, '%Y-%m-%d %H:%M:%S.%fZ'))
+                print("Online:-", online)
+
+
+                ## Time calculation for local file..
+                local_file_modified_time = time.ctime(os.path.getmtime(os.path.join(path, filename)))
+                print("local_file_modified_time :- ", local_file_modified_time)
+                local_file_modified_time = os.path.getmtime(os.path.join(path, filename))
+                print("local_file_modified_time :- ", local_file_modified_time)
+
+
+                # print("Type: ", type(online_file_modified_time), type(local_file_modified_time), type(online))
+
+                if(local_file_modified_time > online):
+                    update_file = self.service.files().update(
+                        fileId=file.get('id'),
+                        media_body=media,
+                    ).execute()
+                    print(f'Updated File')
+                    self.log_append(filename,'Updated',path)
+
+                else:
+                    print("File already up to date.")
 
     def make_folder(self, new_folder, parent_folder_id):
 
         ##first searches for the folder, if not present then create the same.....
         print("Searching for the folder in the given directory:-\n")
         response = self.service.files().list(
-            q=f"mimeType = 'application/vnd.google-apps.folder' and name='{new_folder}' and parents='{parent_folder_id}'",
+            q=f"mimeType = 'application/vnd.google-apps.folder' and not trashed and name='{new_folder}' and parents='{parent_folder_id}'",
             spaces='drive',
             fields='nextPageToken, files(id, name)',
             pageToken=None).execute()
@@ -131,7 +183,7 @@ class MyDrive():
         items = os.listdir(path)
         print("Printing items in Local system:", items)
 
-        for file in os.listdir(path):
+        for file in items:
             print("\n",file, "\n")
             if os.path.isfile(os.path.join(path, file)):
                 self.upload_file(file, path, folder_id)
@@ -140,6 +192,7 @@ class MyDrive():
                 new_path = path + file +"/"
                 print("New Path: ", new_path)
                 self.backup(new_path, new_folder_id)
+
 
 
 
